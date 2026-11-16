@@ -68,7 +68,7 @@ Ist eine Stelle noch nicht gefüllt, fragt der Skill nach oder liest den Wert au
 | `.claude/skills/code/SKILL.md` | `/code specs/<slug>.md`: setzt eine freigegebene Spec Task für Task um, Test zuerst (rot, grün, refactor), ein Conventional Commit pro Task, am Ende Gates grün. Nur manuell aufrufbar. |
 | `.claude/skills/verify/SKILL.md` | `/verify specs/<slug>.md [--pr]`: prüft jedes Akzeptanzkriterium, führt alle Gates aus, holt ein frisches Review vom `reviewer`, geht die Kriterien im Browser durch, schreibt `specs/<slug>.verification.md`. Mit `--pr` ein Draft-PR/MR mit `Refs`. Nur manuell aufrufbar. |
 | `.claude/agents/reviewer.md` | Schreibgeschützter Review-Subagent (nur `Read`, `Grep`, `Glob`, `Bash` für git). Startet ohne Kontext des Autors, liefert Befunde mit Datei, Zeile und Schwere. |
-| `.claude/hooks/gates-on-stop.sh` | Stop-Hook: Will Claude den Turn beenden und hat sich etwas geändert, laufen die schnellen Gates. Rot blockt einmal, beim zweiten Mal (`stop_hook_active`) gibt es nur eine Meldung an dich. Solange `GATES` leer ist, tut er nichts. Braucht `bash` und `git`, `jq` optional. |
+| `.claude/hooks/gates-on-stop.sh` | Stop-Hook: Will Claude den Turn beenden und hat sich etwas geändert, laufen die schnellen Gates. Rot blockt einmal; ist es nach dem Reparaturversuch (`stop_hook_active`) noch rot, blockt er nicht erneut, sondern meldet es dir. Solange `GATES` leer ist, tut er nichts. Braucht `bash` und `git`, `jq` optional. |
 | `.claude/settings.json` | Registriert den Stop-Hook. |
 | `AGENTS.md.template` | Gerüst für die Kontext-Datei: Gates, Dev-Server, Branches, Tickets, Architektur-Karte, harte Regeln, ADRs. |
 | `.agents/skills/…` | Dieselben drei Skills für Codex (`$spec`, `$code`, `$verify`). |
@@ -98,5 +98,7 @@ Den `diff` kannst du auch in die CI hängen. Ändert sich `.claude/agents/review
   `/verify` im Kurs. Statt des `verifier`-Subagenten prüft `verify` selbst und holt sich
   ein Review vom `reviewer`.
 - Unter Windows braucht der Hook Git Bash oder WSL.
+- Hast du unter `~/.claude/skills/` schon einen persönlichen Skill `spec`, `code` oder
+  `verify`, gewinnt der persönliche über den im Projekt. Benenn ihn dann um.
 - `npx skills add dinooo13/rheinwerk-starter-skills` installiert nur die Skills, nicht
   Agent, Hook und Vorlagen. Für den vollen Flow kopieren wie oben.
