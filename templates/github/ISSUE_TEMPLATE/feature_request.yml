@@ -1,0 +1,45 @@
+# Ziel im Projekt: .github/ISSUE_TEMPLATE/feature_request.yml
+name: Feature oder Verbesserung
+description: Eine neue Fähigkeit oder Verbesserung vorschlagen. Ohne Akzeptanzkriterien ist ein Ticket nicht bereit für /spec.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Definition of Ready:** Ein Ticket ist bereit für `/spec`, wenn das Problem klar ist und
+        die Akzeptanzkriterien prüfbar sind. Sie sind der Startpunkt der Spec und später die
+        Grundlage für `/verify`.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: Was fehlt oder stört, und für wen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Akzeptanzkriterien
+      description: |
+        Beobachtbares Verhalten, das ein Mensch oder ein Test prüfen kann, als Checkliste oder
+        Given/When/Then. Denkt an die schweren Fälle: leere Listen, Fehler, Neuladen, alte Daten,
+        mobile Breite.
+      placeholder: |
+        - [ ] In der Bestellliste lässt sich nach Status filtern; der Filter überlebt Neuladen.
+        - [ ] Given keine Bestellung passt zum Filter, When ich filtere, Then sehe ich "Keine Treffer" und "Filter zurücksetzen".
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed-solution
+    attributes:
+      label: Lösungsidee
+      description: Optional. Was sich grob ändern soll.
+
+  - type: textarea
+    id: trade-offs
+    attributes:
+      label: Risiken und Trade-offs
+      description: Optional. Schema-Änderungen, Migrationen, betroffene Bereiche.

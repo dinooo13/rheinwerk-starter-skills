@@ -1,0 +1,45 @@
+# AGENTS.md
+
+<!--
+Vorlage: nach AGENTS.md im Repo-Root kopieren und jede <ANPASSEN>-Stelle füllen.
+Kurz halten (unter ca. 60 Zeilen). Hier steht, was ein Agent nicht aus dem Code erraten kann.
+
+Claude Code liest AGENTS.md direkt, wenn es im Repo keine CLAUDE.md gibt (ab v2.1.277).
+Gibt es schon eine CLAUDE.md, schreib dort die Zeile `@AGENTS.md` hinein.
+Codex liest AGENTS.md immer.
+-->
+
+<ANPASSEN: ein Satz zum Produkt und zum Stack, z. B. "Bestell-Portal: Spring Boot 3 + React 19, PostgreSQL.">
+
+## Gates (alle grün vor jedem Commit)
+```bash
+<ANPASSEN: Gate-Befehle, z. B. ./gradlew spotlessCheck && ./gradlew check>     # schnell, ~30 s
+<ANPASSEN: e2e-Befehl mit festem Port, z. B. PORT=3110 npm run test:e2e>       # langsam
+```
+Der Stop-Hook `.claude/hooks/gates-on-stop.sh` führt die schnellen Gates am Turn-Ende aus;
+rot blockt. Halte die Befehle dort, hier und in den Skills gleich.
+
+Dev-Server: <ANPASSEN: Port und Dev-URL, z. B. `PORT=3110 npm run dev` → http://localhost:3110, Test-Login demo/demo>
+Branches: <ANPASSEN: Branch-Schema, z. B. Basis `main`, Feature `feat/<ticket>-<slug>`>
+Tickets: <ANPASSEN: Ticket-System, z. B. GitHub Issues (`gh`), GitLab (`glab`) oder Jira (`acli`), Projekt-Key>
+
+## Architektur-Karte
+<!-- Ein Ordner pro Zeile: was dort liegt und was dort NICHT hingehört. -->
+- <ANPASSEN: `src/api/` – HTTP-Controller, keine Geschäftslogik>
+- <ANPASSEN: `src/domain/` – reine Logik, keine I/O>
+- <ANPASSEN: `src/persistence/` – Schema, Migrationen, Repositories>
+- <ANPASSEN: wo Unit-Tests und e2e-Tests liegen>
+- `specs/` – Specs und Verifikationsberichte von `/spec`, `/code`, `/verify`
+
+## Harte Regeln
+<!-- Nur Regeln, deren Bruch teuer ist. Jede Regel prüfbar formulieren. -->
+- Niemals einen Test abschwächen, überspringen oder löschen, um ein Gate grün zu bekommen.
+- Kein Commit auf den Basis-Branch; jede Änderung läuft über PR/MR mit `Refs <ticket>`.
+- Schema-Änderungen sind nie still: neues ADR, und alte Daten laden weiter.
+- <ANPASSEN: weitere harte Regeln, z. B. "Keine neuen Abhängigkeiten ohne ADR", "Keine Secrets in Logs">
+
+## ADRs
+Entscheidungen liegen in <ANPASSEN: ADR-Ordner, z. B. `docs/adr/`> (Index: `README.md` dort).
+Lies das passende ADR, bevor du Persistenz, Datenschema, Auth oder eine Kern-Abhängigkeit
+anfasst. Angenommene ADRs gelten: eine strukturelle Änderung braucht ein neues ADR, nie eine
+Änderung am alten.
