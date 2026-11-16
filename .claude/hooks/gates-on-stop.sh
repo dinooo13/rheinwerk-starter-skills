@@ -49,10 +49,24 @@ fingerprint() {
       | while IFS= read -r -d '' f; do printf '%s ' "$f"; git hash-object -- "$f" 2>/dev/null; done
   } | git hash-object --stdin
 }
+still_red() { # zweiter Stopp in Folge: nicht mehr blocken, nur dem Menschen melden
+  msg="gates-on-stop: nach dem Reparaturversuch immer noch rot: $1"
+  if command -v jq >/dev/null 2>&1; then
+    jq -n --arg m "$msg" '{systemMessage: $m}'
+    exit 0
+  fi
+  printf '%s\n' "$msg" >&2
+  exit 1 # nicht blockierender Fehler: der Mensch sieht die Meldung
+}
+
+# Zustand: Zeile 1 Fingerabdruck, Zeile 2 die roten Gates des letzten Laufs.
 state_file="$(git rev-parse --git-path claude-gates-on-stop)"
 current="$(fingerprint)"
-[ "$current" = "$(cat "$state_file" 2>/dev/null)" ] && exit 0
-printf '%s\n' "$current" > "$state_file"
+if [ "$current" = "$(sed -n 1p "$state_file" 2>/dev/null)" ]; then
+  last_failed="$(sed -n 2p "$state_file")"
+  [ -n "$last_failed" ] && [ "$active" = "true" ] && still_red "$last_failed"
+  exit 0
+fi
 
 failed=""
 log=""
@@ -65,18 +79,10 @@ for gate in "${GATES[@]}"; do
 $(printf '%s\n' "$out" | sed $'s/\x1b\\[[0-9;]*m//g' | tail -n 40)"
   fi
 done
+printf '%s\n%s\n' "$current" "$failed" > "$state_file"
 
 [ -z "$failed" ] && exit 0
-
-if [ "$active" = "true" ]; then
-  msg="gates-on-stop: nach dem Reparaturversuch immer noch rot: $failed"
-  if command -v jq >/dev/null 2>&1; then
-    jq -n --arg m "$msg" '{systemMessage: $m}'
-    exit 0
-  fi
-  printf '%s\n' "$msg" >&2
-  exit 1 # nicht blockierender Fehler: der Mensch sieht die Meldung
-fi
+[ "$active" = "true" ] && still_red "$failed"
 
 reason="Not done: the gates are red ($failed). Fix the cause, do not skip or weaken tests, then end your turn again.$log"
 if command -v jq >/dev/null 2>&1; then
