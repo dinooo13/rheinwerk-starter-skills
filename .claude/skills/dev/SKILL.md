@@ -1,12 +1,13 @@
 ---
 name: dev
-description: Implement a specified task end-to-end. Reads the specification, builds everything, writes tests, verifies in the browser, and commits. Use when the user wants to build out a task.
-argument: <spec-file>
+description: Implement a specified task end-to-end. Reads the specification, builds everything with subagents, writes tests, verifies in the browser, and commits. Use when the user wants to build out a task.
+argument-hint: "[spec-file]"
+disable-model-invocation: true
 ---
 
-# Dev — Task Implementation (Team Mode)
+# Dev — Task Implementation (Subagents)
 
-You are the **team lead** orchestrating a fully specified task end-to-end. You coordinate a team of specialized agents who build the code, write tests, and verify everything in the browser. Your job is **orchestration** — you set up, delegate, coordinate, triage bugs, and make the final commit. You do not implement features or run verification checks yourself.
+You are the **orchestrator** of a fully specified task. You delegate the work to **subagents**: they build the code, write tests, and verify everything in the browser. Each subagent starts with a fresh context, does one bounded job, and returns only a short summary to you. Your job is **orchestration**: you gather context, plan, delegate, triage the summaries, and commit. You do not implement features or run verification checks yourself.
 
 ## Inputs
 
@@ -14,29 +15,29 @@ You are the **team lead** orchestrating a fully specified task end-to-end. You c
 
 ## Context Gathering
 
-Before creating the team or writing any code:
+Before delegating or writing any code:
 
 1. Read the specification file (`$ARGUMENTS`).
 2. Read the **project context file** (e.g. `CLAUDE.md`, `AGENTS.md`, `COPILOT.md`, `RULES.md`, or whatever the project uses) for architecture, tech stack, and conventions.
 3. Scan `specs/` for related specifications to understand the overall product context.
 4. Read existing progress files in `specs/` (match `*_progress.md`) to understand what's already built.
-5. Scan the existing codebase to understand current patterns — look at the directories and files mentioned in the project context file, plus any key source directories. Understand:
+5. Delegate the codebase scan to a **read-only research subagent** (Claude Code: `Explore`, Codex: `explorer`). Ask it to look at the directories and files mentioned in the project context file, plus any key source directories, and to return a short summary of:
    - Project structure and naming conventions
    - Existing code patterns and abstractions
    - How tests are written and run
    - How the app is started for development
-6. **Discover the project's verification tooling:**
+6. **Discover the project's verification tooling** (the research subagent can include this in its summary):
    - Test commands — look in `package.json` scripts, the project context file, Makefile, etc. for unit test, integration test commands.
    - Linting/formatting — look for eslint, prettier, biome, or similar configs and scripts.
    - Type checking — look for tsc, vue-tsc, pyright, or similar.
    - Any existing test files and patterns (test directory structure, naming conventions, test utilities, fixtures).
-7. **Discover available custom agents:**
-   - Check the project's agent definitions directory (e.g. `.claude/agents/`, `.github/agents/`, `.agents/`, or similar) for project-level custom agent definitions.
+7. **Discover available custom subagents:**
+   - Check the project's agent definitions directory (e.g. `.claude/agents/`, `.codex/agents/`, `.github/agents/`, or similar) for project-level custom agent definitions.
    - Check the user's global agent definitions directory for user-level custom agent definitions.
    - Read each agent file to understand its specialization and available tools.
    - Prefer custom agents that match the project's tech stack over generic built-in types.
 
-**From the project context file and the codebase, derive:**
+**From the project context file and the research summary, derive:**
 - The tech stack (languages, frameworks, libraries)
 - Directory conventions (where server code lives, where UI code lives, where tests live, etc.)
 - Build/dev/test/lint commands
@@ -48,27 +49,21 @@ This derived context replaces any hardcoded assumptions — the prompt adapts to
 
 Create a progress file at `specs/{name}_progress.md` (derive the name from the spec filename). Start with status "In Progress" and a full task checklist extracted from the specification. Update this file as you complete sections.
 
-## Team Setup
+## Plan the Work
 
-After context gathering, create a team and define all work items:
-
-### 1. Create the team
-
-Use your platform's team/swarm coordination capabilities to create a team named after the task (e.g. `task-restaurant-discovery`).
-
-### 2. Analyze the spec and plan work phases
+### 1. Analyze the spec and plan work phases
 
 Read the specification and break it into logical work phases. Common patterns include:
 
 - **Backend + Frontend in parallel** — when the spec defines both server-side and client-side work with a clear API contract between them.
 - **Sequential phases** — when later work depends on earlier work being complete.
-- **Single-track** — when the spec is small enough that one implementation agent suffices.
+- **Single-track** — when the spec is small enough that one implementation subagent suffices.
 
 Identify which phases can run **in parallel** (e.g. backend and frontend when the API contract is defined in the spec) and which must be **sequential**.
 
-### 3. Create tasks in the shared task list
+### 2. Write the phases into the progress file
 
-Create one work item per work phase. Set up dependency relationships between them so blocked work does not start prematurely.
+Add one checklist item per work phase to the progress file, with its dependencies. You start a phase only when every phase it depends on is done.
 
 A typical breakdown (adapt to the spec):
 
@@ -83,17 +78,19 @@ A typical breakdown (adapt to the spec):
 
 Adjust based on what the spec requires. Not every task needs all phases.
 
-### 4. Do Phase 1 yourself (T1)
+### 3. Do Phase 1 yourself (T1)
 
 - Install any new packages/dependencies listed in the specification.
 - Update project configuration if new modules or settings are needed.
 - Do NOT remove or change existing dependencies unless the spec explicitly calls for it.
 - **Commit** the changes with a phase-specific message (e.g. `feat: add dependencies and config`).
-- Mark T1 as completed when done.
+- Mark T1 as completed in the progress file.
 
-### 5. Spawn teammates
+### 4. Spawn subagents
 
-After T1 is complete, spawn sub-agents for each remaining phase. **Launch independent phases in parallel** when possible.
+After T1 is complete, spawn one subagent per phase whose dependencies are done. **Launch independent phases in parallel** (e.g. backend and frontend in the same step). Start a dependent phase only after the subagents it depends on have returned.
+
+A subagent sees nothing of your conversation. Its prompt is all it knows, so make it self-contained, and always ask it to finish with a **short summary**: files created or changed, what is done, and anything left open. Ask for the summary, not for full logs or diffs.
 
 #### Choosing agent types
 
@@ -101,7 +98,7 @@ For every role, follow this priority order:
 
 1. **Project-specific custom agent** — check the project's agent definitions directory for an agent tailored to the project's stack (e.g. `nuxt-vue-frontend-dev`, a Rails-specific backend agent, etc.).
 2. **User-specific custom agent** — check the user's global agent definitions directory for a user-level agent matching the role.
-3. **Tech-agnostic custom agent** — use a generic custom agent for the role (see table below).
+3. **Tech-agnostic custom agent** — use a generic custom agent for the role (e.g. the `verifier` agent that ships with these starter skills).
 4. **General-purpose agent** — final fallback if no custom agent fits.
 
 | Role | Preferred specialization | Final fallback |
@@ -109,56 +106,52 @@ For every role, follow this priority order:
 | Backend | backend / API agent | general-purpose |
 | Frontend | frontend / UI agent | general-purpose |
 | Tests | test-writing agent | general-purpose |
-| Verification | QA / testing agent | general-purpose |
+| Verification | `verifier` / QA agent | general-purpose |
 
-#### Implementation agents (backend, frontend)
+#### Implementation subagents (backend, frontend)
 
-Each implementation agent's prompt must include:
+Each implementation subagent's prompt must include:
 
 - The relevant sections of the specification for their scope.
 - The project conventions you derived from the project context file and the codebase (tech stack, directory structure, coding patterns, naming conventions).
 - A clear list of what to build, derived from the specification.
-- Instructions to claim their work item from the task list, mark it in_progress, and mark it completed when done.
 
-When the spec has both server-side and client-side work, include the **API contract** (endpoints, request/response shapes) from the spec in the frontend agent's prompt so it can build against the expected API without waiting for the backend.
+When the spec has both server-side and client-side work, include the **API contract** (endpoints, request/response shapes) from the spec in the frontend subagent's prompt so it can build against the expected API without waiting for the backend.
 
-#### Test agent
+#### Test subagent
 
-Prompt must include:
+Spawn it after the implementation subagents have returned. Its prompt must include:
 - The specification's test plan / acceptance criteria.
+- The files the implementation subagents reported as created or changed.
 - The project's test commands, test directory, and existing test patterns.
-- Instructions to wait for implementation work items to complete (check the task list), then read the created files, write tests, run them, and ensure they pass.
-- Mark the test work item as completed when done.
+- Instructions to read those files, write tests, run them, and ensure they pass.
 
-#### Verification agent
+#### Verification subagent
 
-This agent drives the verification loop — running tests, lint, type checks, and interactively verifying the app in the browser using browser automation (e.g. Playwright, Cypress, Puppeteer). Its prompt must include:
+This subagent runs the checks below and reports back. It verifies with a fresh context and **does not fix anything**: it returns a list of failures, and you delegate the fixes. Its prompt must include:
 
 - A summary of every user-facing flow added or changed by this task.
 - The project's dev server command (from the project context file).
 - The project's test, lint, and type-check commands.
-- Instructions to run the verification loop (see below) and report results back to the team lead.
+- The checks to run (see below) and the instruction to return a pass/fail summary with every failure.
 
-**Launch independent agents in parallel.** Agents that need to wait for others will self-coordinate by polling the task list for their work items to become unblocked.
+## Verification Loop (driven by you)
 
-## Verification Loop (driven by the verification agent)
-
-The verification agent runs this loop. The team lead monitors and triages issues reported back.
+You run this loop. Every pass spawns a **new** verification subagent, so it checks the code with a fresh context.
 
 ### The Loop
 
 ```
 while not all_checks_pass:
-    1. Run checks (unit tests, lint, type check, browser verification)
-    2. Collect all failures
-    3. Report failures to team lead
-    4. Fix what it can, wait for team lead to delegate the rest
-    5. Re-run checks
+    1. Spawn the verification subagent → it runs all checks and returns a summary of failures
+    2. Delegate each failure to a fix subagent (implementation or test)
+    3. Commit the fixes
+    4. Re-run from step 1
 ```
 
 ### Checks to run
 
-The verification agent runs these in sequence, collecting **all** failures before reporting:
+The verification subagent runs these in sequence, collecting **all** failures before reporting:
 
 #### a) Unit & integration tests
 
@@ -168,7 +161,7 @@ The verification agent runs these in sequence, collecting **all** failures befor
 #### b) Linting & formatting
 
 - Run lint/format commands if the project has them.
-- Auto-fix where possible (e.g. `--fix`), report remaining violations.
+- Report every violation.
 
 #### c) Type checking
 
@@ -194,17 +187,17 @@ Walk through every requirement in the specification and verify it is implemented
 - For each business rule in the spec: confirm it's implemented and has test coverage.
 - For each item in the spec's test plan: confirm a corresponding test exists and passes.
 
-### Reporting and fixing
+### Triage and fixing
 
-The verification agent reports all failures to the team lead. The team lead then:
+You read the verification summary and delegate every failure. Each fix subagent gets the failure details, the relevant spec section, and the files involved:
 
-- **Simple fixes** (lint auto-fix, minor type errors) — tells the verification agent to fix them.
-- **Backend bugs** — messages the backend agent with the failure details.
-- **Frontend bugs** — messages the frontend agent with the failure details.
-- **Missing tests** — messages the test agent, or asks the verification agent to write them.
-- **Missing implementation** — delegates to the appropriate implementation agent.
+- **Simple fixes** (lint auto-fix, minor type errors) — one fix subagent for all of them.
+- **Backend bugs** — a backend fix subagent.
+- **Frontend bugs** — a frontend fix subagent.
+- **Missing tests** — a test subagent.
+- **Missing implementation** — the matching implementation subagent.
 
-After all fixes are applied, the team lead tells the verification agent to re-run **all checks** from the top. Fixes can introduce regressions.
+After all fixes are applied, spawn a new verification subagent that re-runs **all checks** from the top. Fixes can introduce regressions.
 
 ### Exit condition
 
@@ -215,19 +208,18 @@ The loop exits when **all** of the following are true in a single pass:
 - Browser verification passes for all flows
 - Every requirement in the specification has implementation and test coverage
 
-## Coordination During Execution
+## During Execution
 
-As team lead, your role is pure orchestration:
+As orchestrator, your role is pure orchestration:
 
-1. **Monitor progress** — check the task list periodically to see status.
-2. **Commit after each completed phase** — when a work item completes, stage and commit its changes immediately. This keeps work recoverable and gives a clear git history. Check the project context file or the repo for project-specific commit guidelines (e.g. commit-msg hooks, scoping rules, ticket references). Fall back to conventional commits if none exist. Messages should describe the phase, not the whole task:
+1. **Track progress** — update the progress file whenever a subagent returns.
+2. **Commit after each completed phase** — when a subagent returns, check its summary, then stage and commit its changes immediately. This keeps work recoverable and gives a clear git history. Check the project context file or the repo for project-specific commit guidelines (e.g. commit-msg hooks, scoping rules, ticket references). Fall back to conventional commits if none exist. Messages should describe the phase, not the whole task:
    - `feat: implement API routes and database schema`
    - `feat: add voting page and restaurant components`
    - `test: add unit and integration tests for voting`
    - `fix: resolve lint errors and type issues`
-3. **Handle messages** — teammates will send you messages if they hit issues or find bugs.
-4. **Triage and delegate** — route bug reports from the verification agent to the right implementation agent. Don't fix things yourself unless it's trivial config or coordination issues.
-5. **Unblock work** — if a teammate is stuck, help them or reassign the work item.
+3. **Triage and delegate** — route failures from the verification summary to the right fix subagent. Don't fix things yourself unless it's trivial config.
+4. **Handle blocked subagents** — if a subagent reports that it is stuck or that the spec is unclear, resolve the question (ask the user if needed) and spawn a new subagent with the missing information.
 
 ## Finalize (T6 — you do this directly)
 
@@ -236,9 +228,8 @@ As team lead, your role is pure orchestration:
 1. Update the progress file to status "Complete" with a summary of what was built, bugs fixed, and verification results.
 2. Update the project context file if the architecture section needs new info (new tech, new conventions, new directories).
 3. Run the project's test command one final time to confirm all tests still pass.
-4. Shut down all teammate agents.
-5. Commit any remaining changes (progress file, project context updates) with a phase-specific message like `docs: update progress and project docs`.
-6. **Verify the CI/CD pipeline (GitLab only — skip if not applicable):**
+4. Commit any remaining changes (progress file, project context updates) with a phase-specific message like `docs: update progress and project docs`.
+5. **Verify the CI/CD pipeline (GitLab only — skip if not applicable):**
    - Check if `glab` is available (`which glab`) and the remote points to a GitLab host. If either check fails, skip this step silently.
    - Push the branch to the remote (`git push -u origin HEAD`).
    - Poll the pipeline status with `glab ci status` until it reaches a terminal state (success, failed, or canceled). Wait ~30 seconds between polls.

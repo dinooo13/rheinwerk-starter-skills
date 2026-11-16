@@ -1,7 +1,7 @@
 ---
 name: spec
 description: Brainstorm and specify a task through iterative Q&A. Use when the user wants to refine a task, feature idea, or work item into a full specification.
-argument: <task-description-or-file>
+argument-hint: "[task-description-or-file]"
 ---
 
 # Spec — Task Brainstorming & Specification
