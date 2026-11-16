@@ -1,5 +1,5 @@
 <!-- Ziel im Projekt: .gitlab/merge_request_templates/Default.md -->
-Refs #<!-- Ticket-Nummer. Refs, nicht Closes: ein Mensch schließt das Ticket nach Review und Merge. -->
+Relates to #<!-- Issue-Nummer, bei Jira der Key. Relates to, nicht Closes: ein Mensch schließt das Ticket nach Review und Merge. -->
 
 ## Zusammenfassung
 

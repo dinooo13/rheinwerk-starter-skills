@@ -1,6 +1,6 @@
 ---
 name: verify
-description: Verify an implementation against its spec. Checks every acceptance criterion, runs the gates, gets a review from a fresh reviewer subagent, walks the criteria in a real browser and writes a verification report. With --pr it opens a draft PR/MR that refers to the ticket.
+description: Verify an implementation against its spec. Checks every acceptance criterion, runs the gates, gets a review from a fresh reviewer subagent, walks the criteria in a real browser and writes a verification report. With --pr it opens a draft PR/MR that refers to the ticket, waits for the pipeline, updates the ticket and repeats the browser walk on the dev URL.
 argument-hint: "[specs/<slug>.md] [--pr]"
 disable-model-invocation: true
 ---
@@ -22,10 +22,18 @@ or ask the user once.
 - **Gates:** <ANPASSEN: Gate-Befehle (lint, typecheck, test, e2e), z. B. `npm run lint`, `npm run typecheck`, `npm test`, `PORT=3110 npm run test:e2e`>
 - **Dev server and URL:** <ANPASSEN: Port und Dev-URL, z. B. `PORT=3110 npm run dev` auf `http://localhost:3110`, plus Test-Login falls nötig>
 - **Open a draft PR/MR:** <ANPASSEN: Ticket-System, z. B. `gh pr create --draft --base main --title "<title>" --body-file <body>`>
-  - GitLab: `glab mr create --draft --target-branch main --title "<title>" --description-file <body>`
+  - GitLab: `glab mr create --draft -b main -t "<title>" --description-file <body> -y`
   - Jira: the ticket lives in Jira, the review in GitHub or GitLab. Use the `gh`
     or `glab` line and put the Jira key in the title and the branch name, so
     Jira links the PR.
+- **Reference line:** <ANPASSEN: Verweis, z. B. GitHub `Refs #42`, GitLab `Relates to #42`, Jira `Relates to KEY-123`>
+- **Wait for the pipeline:** <ANPASSEN: CI-Befehl, z. B. `gh pr checks --watch --fail-fast`>
+  - GitLab: `glab ci status --wait`
+- **Update the ticket:** <ANPASSEN: Ticket-Update nach grüner Pipeline und Dev-Check, leer = nichts tun, z. B. `gh issue comment <n> --body "<text>"`>
+  - GitLab: `glab issue note <n> -m "<text>"`
+  - Jira: `acli jira workitem transition --key <KEY> --status "<ANPASSEN: Status, z. B. In Review>" --yes`,
+    then `acli jira workitem comment create --key <KEY> --body "<text>"`
+- **Dev URL after deploy:** <ANPASSEN: Dev- oder Review-App-URL nach dem Auto-Deploy, leer = nur lokal>
 
 ## 1. Load
 
@@ -102,10 +110,24 @@ Commit only the report: `docs(spec): add verification report for <slug>`.
 
 Only if the user passed `--pr`, the verdict is Pass, and the spec names a ticket:
 
-1. Write the body to a temporary file: a short summary, the line
-   `Refs <ticket>` (`Refs #42` or `Refs KEY-123`), and the verification report.
+1. Write the body to a temporary file: a short summary, the reference line from
+   Settings, and the verification report.
 2. `git push -u origin HEAD`, then open the draft with the command from Settings.
-3. Show the user the link.
+3. Wait for the pipeline with the command from Settings and read the final status.
+   Red is a blocking finding: add the failing job and its log lines to the report,
+   leave the ticket as it is and stop. The fix goes back to `/code`.
+4. If a Dev URL is set, wait until the auto-deploy answers (`curl -sf <dev-url>`)
+   and repeat the browser walk from step 5 against it instead of localhost. If the
+   e2e config reads a base URL (e.g. `E2E_BASE_URL`), run the e2e gate against it
+   too. Without a Dev URL the local walk stands; say so under "Not verified".
+   A failure here is blocking, as in step 3.
+5. Add the pipeline result and the Dev walk to the report, commit and push it:
+   `docs(spec): update verification report for <slug>`.
+6. Only when steps 3 and 4 are green: update the ticket with the command from
+   Settings, with the PR/MR link and "Verification: Pass, see
+   `specs/<slug>.verification.md`".
+7. Show the user the link.
 
-Use `Refs`, not `Closes` or `Fixes`: the ticket stays open until a human has
-reviewed and merged. Never merge, never mark ready, never open a PR/MR with a red gate.
+Refer, do not close: no `Closes` or `Fixes`. The ticket stays open until a human
+has reviewed and merged. Never merge, never mark ready, never open a PR/MR with a
+red gate.

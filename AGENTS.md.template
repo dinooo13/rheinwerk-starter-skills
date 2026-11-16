@@ -34,7 +34,7 @@ Tickets: <ANPASSEN: Ticket-System, z. B. GitHub Issues (`gh`), GitLab (`glab`) o
 ## Harte Regeln
 <!-- Nur Regeln, deren Bruch teuer ist. Jede Regel prüfbar formulieren. -->
 - Niemals einen Test abschwächen, überspringen oder löschen, um ein Gate grün zu bekommen.
-- Kein Commit auf den Basis-Branch; jede Änderung läuft über PR/MR mit `Refs <ticket>`.
+- Kein Commit auf den Basis-Branch; jede Änderung läuft über PR/MR mit Verweis aufs Ticket (`Refs #42` bzw. `Relates to …`), nie `Closes`.
 - Schema-Änderungen sind nie still: neues ADR, und alte Daten laden weiter.
 - <ANPASSEN: weitere harte Regeln, z. B. "Keine neuen Abhängigkeiten ohne ADR", "Keine Secrets in Logs">
 
