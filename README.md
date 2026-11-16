@@ -32,7 +32,7 @@ Ein durchgespieltes Beispiel (Nuxt, GitHub) ist das Demo-Repo
    Hast du schon eine `.claude/settings.json`, kopier sie nicht, sondern übernimm den
    `Stop`-Eintrag in deine.
 
-2. **Anpass-Stellen finden:** `grep -rn ANPASSEN .claude .agents AGENTS.md`
+2. **Anpass-Stellen finden:** `grep -rn ANPASSEN .claude .agents .github .gitlab AGENTS.md 2>/dev/null`
 
 3. **Ticket-System wählen.** In `spec` (Ticket lesen) und `verify` (Draft-PR/MR öffnen)
    steht GitHub als Beispiel, darunter die Zeilen für GitLab und Jira:
@@ -56,7 +56,7 @@ Ein durchgespieltes Beispiel (Nuxt, GitHub) ist das Demo-Repo
    schon eine `CLAUDE.md`, schreib dort `@AGENTS.md` hinein. Codex liest `AGENTS.md` immer.
 
 6. **Ticket-Vorlage einbauen** (aus `templates/`, siehe unten), dann eine neue Session
-   starten und mit `grep -rn ANPASSEN .claude .agents AGENTS.md` prüfen, dass nichts übrig ist.
+   starten und mit `grep -rn ANPASSEN .claude .agents .github .gitlab AGENTS.md 2>/dev/null` prüfen, dass nichts übrig ist.
 
 Ist eine Stelle noch nicht gefüllt, fragt der Skill nach oder liest den Wert aus `AGENTS.md`.
 
