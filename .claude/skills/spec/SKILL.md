@@ -18,7 +18,7 @@ or ask the user once.
 
 - **Read a ticket:** <ANPASSEN: Ticket-System, z. B. `gh issue view <n> --json number,title,body,comments`>
   - GitLab: `glab issue view <n> --comments`
-  - Jira: `acli jira workitem view <KEY-123> --fields summary,description,comment`
+  - Jira: `acli jira workitem view <KEY-123> --fields '*all' --json` (without `'*all'` it misses comments and custom fields)
 - **Gates:** <ANPASSEN: Gate-Befehle (lint, typecheck, test, e2e), z. B. `npm run lint`, `npm run typecheck`, `npm test`, `npm run test:e2e`>
 - **Dev URL:** <ANPASSEN: Port und Dev-URL, z. B. `http://localhost:3110`, plus Test-Login falls nötig>
 - **Approval:** <ANPASSEN: Freigabe-Modus, Standard: Kopfzeile in der Spec + Commit `docs(spec): approve <slug>`>
