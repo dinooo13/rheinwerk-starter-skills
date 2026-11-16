@@ -30,21 +30,22 @@ Ein durchgespieltes Beispiel (Nuxt, GitHub) ist das Demo-Repo
    ```
 
    Hast du schon eine `.claude/settings.json`, kopier sie nicht, sondern übernimm den
-   `Stop`-Eintrag in deine.
+   `Stop`-Eintrag und den `permissions.deny`-Block in deine.
 
 2. **Anpass-Stellen finden:** `grep -rn ANPASSEN .claude .agents .github .gitlab AGENTS.md 2>/dev/null`
 
-3. **Ticket-System wählen.** In `spec` (Ticket lesen) und `verify` (Draft-PR/MR öffnen)
-   steht GitHub als Beispiel, darunter die Zeilen für GitLab und Jira:
+3. **Ticket-System wählen.** In `spec` (Ticket lesen) und `verify` (Draft-PR/MR, Pipeline,
+   Ticket-Update) steht GitHub als Beispiel, darunter die Zeilen für GitLab und Jira:
 
-   | System | Ticket lesen | PR/MR öffnen | Verweis |
-   |--------|--------------|--------------|---------|
-   | GitHub | `gh issue view <n> --json number,title,body,comments` | `gh pr create --draft …` | `Refs #42` |
-   | GitLab | `glab issue view <n> --comments` | `glab mr create --draft …` | `Refs #42` |
-   | Jira | `acli jira workitem view KEY-123 --fields summary,description,comment` | `gh` oder `glab` | `Refs KEY-123` |
+   | System | Ticket lesen | PR/MR öffnen | Verweis | Pipeline abwarten | Ticket-Update |
+   |--------|--------------|--------------|---------|-------------------|---------------|
+   | GitHub | `gh issue view <n> --json number,title,body,comments` | `gh pr create --draft …` | `Refs #42` | `gh pr checks --watch --fail-fast` | `gh issue comment <n> --body …` |
+   | GitLab | `glab issue view <n> --comments` | `glab mr create --draft …` | `Relates to #42` | `glab ci status --wait` | `glab issue note <n> -m …` |
+   | Jira | `acli jira workitem view KEY-123 --fields '*all' --json` | `gh` oder `glab` | `Relates to KEY-123` | wie GitHub/GitLab | `acli jira workitem transition --key KEY-123 --status "In Review" --yes`, dann `acli jira workitem comment create --key KEY-123 --body …` |
 
-   Ersetze die `<ANPASSEN: Ticket-System …>`-Zeile durch deinen Befehl und lösch die
-   anderen beiden.
+   Ersetze jede `<ANPASSEN: …>`-Zeile durch deinen Befehl und lösch die anderen.
+   Habt ihr einen Auto-Deploy auf Dev oder Review-Apps, trag in `verify` die Dev-URL ein:
+   Dann wiederholt `/verify --pr` den Browser-Check dort. Leer heißt: nur lokal.
 
 4. **Gates eintragen:** lint, typecheck, test, e2e. Sie stehen an vier Stellen: oben in
    `.claude/hooks/gates-on-stop.sh` (nur die schnellen, ohne e2e; leer heißt: Hook aus), in `code`, in `verify`
@@ -55,7 +56,11 @@ Ein durchgespieltes Beispiel (Nuxt, GitHub) ist das Demo-Repo
    Claude Code liest `AGENTS.md`, wenn es keine `CLAUDE.md` gibt (ab v2.1.277). Hast du
    schon eine `CLAUDE.md`, schreib dort `@AGENTS.md` hinein. Codex liest `AGENTS.md` immer.
 
-6. **Ticket-Vorlage einbauen** (aus `templates/`, siehe unten), dann eine neue Session
+6. **Leitplanken prüfen:** <ANPASSEN: `permissions.deny` in `.claude/settings.json` an eure
+   Regeln anpassen, z. B. Deploy-Befehle, Prod-Zugänge, weitere Secret-Dateien>. Siehe
+   [Leitplanken](#leitplanken).
+
+7. **Ticket-Vorlage einbauen** (aus `templates/`, siehe unten), dann eine neue Session
    starten und mit `grep -rn ANPASSEN .claude .agents .github .gitlab AGENTS.md 2>/dev/null` prüfen, dass nichts übrig ist.
 
 Ist eine Stelle noch nicht gefüllt, fragt der Skill nach oder liest den Wert aus `AGENTS.md`.
@@ -66,18 +71,47 @@ Ist eine Stelle noch nicht gefüllt, fragt der Skill nach oder liest den Wert au
 |-------|-------|
 | `.claude/skills/spec/SKILL.md` | `/spec <ticket \| aufgabe>`: liest Ticket, `AGENTS.md` und ADRs, lässt einen Explore-Subagenten den Code kartieren, klärt offene Punkte, schreibt `specs/<slug>.md` und **hält an**, bis ein Mensch freigibt. |
 | `.claude/skills/code/SKILL.md` | `/code specs/<slug>.md`: setzt eine freigegebene Spec Task für Task um, Test zuerst (rot, grün, refactor), ein Conventional Commit pro Task, am Ende Gates grün. Nur manuell aufrufbar. |
-| `.claude/skills/verify/SKILL.md` | `/verify specs/<slug>.md [--pr]`: prüft jedes Akzeptanzkriterium, führt alle Gates aus, holt ein frisches Review vom `reviewer`, geht die Kriterien im Browser durch, schreibt `specs/<slug>.verification.md`. Mit `--pr` ein Draft-PR/MR mit `Refs`. Nur manuell aufrufbar. |
+| `.claude/skills/verify/SKILL.md` | `/verify specs/<slug>.md [--pr]`: prüft jedes Akzeptanzkriterium, führt alle Gates aus, holt ein frisches Review vom `reviewer`, geht die Kriterien im Browser durch, schreibt `specs/<slug>.verification.md`. Mit `--pr` ein Draft-PR/MR mit Verweis aufs Ticket (`Refs` bzw. `Relates to`), wartet auf die Pipeline, setzt den Ticket-Status bzw. kommentiert und prüft die Dev-URL im Browser. Nur manuell aufrufbar. |
 | `.claude/agents/reviewer.md` | Schreibgeschützter Review-Subagent (nur `Read`, `Grep`, `Glob`, `Bash` für git). Startet ohne Kontext des Autors, liefert Befunde mit Datei, Zeile und Schwere. |
 | `.claude/hooks/gates-on-stop.sh` | Stop-Hook: Will Claude den Turn beenden und hat sich etwas geändert, laufen die schnellen Gates. Rot blockt einmal; ist es nach dem Reparaturversuch (`stop_hook_active`) noch rot, blockt er nicht erneut, sondern meldet es dir. Solange `GATES` leer ist, tut er nichts. Braucht `bash` und `git`, `jq` optional. |
-| `.claude/settings.json` | Registriert den Stop-Hook. |
+| `.claude/settings.json` | Registriert den Stop-Hook und enthält ein `permissions.deny`-Beispiel (siehe [Leitplanken](#leitplanken)). |
 | `AGENTS.md.template` | Gerüst für die Kontext-Datei: Gates, Dev-Server, Branches, Tickets, Architektur-Karte, harte Regeln, ADRs. |
 | `.agents/skills/…` | Dieselben drei Skills für Codex (`$spec`, `$code`, `$verify`). |
 | `.codex/agents/reviewer.toml` | Der `reviewer` für Codex. Read-only erzwingt Codex nur über die Sandbox der Session. |
 | `templates/github/ISSUE_TEMPLATE/feature_request.yml` | Issue-Formular mit Pflichtfeld Akzeptanzkriterien → `.github/ISSUE_TEMPLATE/` |
 | `templates/github/pull_request_template.md` | PR-Vorlage mit `Refs #`, Spec, Bericht, Testplan → `.github/` |
 | `templates/gitlab/issue_templates/Feature.md` | Issue-Vorlage mit Akzeptanzkriterien → `.gitlab/issue_templates/` |
-| `templates/gitlab/merge_request_templates/Default.md` | MR-Vorlage → `.gitlab/merge_request_templates/` |
+| `templates/gitlab/merge_request_templates/Default.md` | MR-Vorlage mit `Relates to #` → `.gitlab/merge_request_templates/` |
 | `templates/jira/ticket-vorlage.md` | Welche Felder ein Jira-Ticket für `/spec` braucht, wie `/spec` es liest und wie PRs verknüpft werden. |
+
+## Leitplanken
+
+Was der Agent nicht darf, steht nicht im Prompt, sondern in den Settings. Claude Code
+setzt diese Regeln durch, nicht das Modell.
+
+- **`permissions.deny`** in `.claude/settings.json` gilt für alle im Repo. Das Beispiel
+  verbietet Force-Push (`Bash(git push --force*)` und Varianten) sowie Lesen und
+  Schreiben von `.env` und `.env.*`. `deny` schlägt `allow` aus jeder anderen Datei und
+  gilt sofort, auch ohne Folder-Trust. Ergänze eure Deploy-Befehle und weitere
+  Secret-Pfade. Braucht ihr `.env.example`, nehmt sie mit `Read(!.env.example)` hinter
+  den `.env.*`-Regeln wieder heraus. Settings sind striktes JSON ohne Kommentare.
+- **Grenzen:** Eine `Bash(...)`-Regel prüft den Befehlstext. `/usr/bin/git push --force`
+  oder `sh -c '…'` fängt sie nicht. `Read`-Regeln greifen bei den Datei-Tools und bei
+  `cat`, `head` usw., aber nicht bei einem Skript, das die Datei selbst öffnet.
+- **Managed Settings** für firmenweite Regeln: eine `managed-settings.json`
+  (macOS `/Library/Application Support/ClaudeCode/`, Linux und WSL `/etc/claude-code/`,
+  Windows `C:\Program Files\ClaudeCode\`), per MDM oder als Server-managed Settings aus
+  der claude.ai-Admin-Konsole. Kein User- oder Projekt-File überschreibt sie.
+  `allowManagedPermissionRulesOnly` macht sie zur einzigen Quelle für Rechte-Regeln.
+- **Sandboxing** begrenzt Dateisystem und Netzwerk für Bash-Befehle auf OS-Ebene
+  (macOS Seatbelt, Linux und WSL2 bubblewrap), unabhängig vom Befehlstext. Einschalten
+  mit `/sandbox` oder `"sandbox": {"enabled": true}`. Die Datei-Tools laufen außerhalb
+  der Sandbox, dafür sind die `Read`/`Edit`-Regeln da. Nutzt beides.
+
+Quellen: [Settings](https://code.claude.com/docs/en/settings),
+[Permissions](https://code.claude.com/docs/en/permissions),
+[Managed Settings](https://code.claude.com/docs/en/managed-settings),
+[Sandboxing](https://code.claude.com/docs/en/sandboxing).
 
 ## Codex-Spiegel synchron halten
 
