@@ -42,13 +42,17 @@ or ask the user once.
 For each task in the spec, in order:
 
 1. **Red.** Write or extend a test that describes the task's behavior and run it.
-   It must fail for the right reason.
+   It must fail for the right reason. **Hard rule: no production code for a task
+   before you have seen its test fail.** Show the command and the failing
+   assertion in your reply before you implement. If a task has no testable
+   behavior (an ADR, docs, config), say so explicitly: `No test: <reason>`.
 2. **Green.** Write the smallest change that makes the test pass. Follow the
    patterns and hard rules in `AGENTS.md`.
 3. **Refactor.** Clean up while the tests stay green.
 4. **Commit.** One small Conventional Commit per task, e.g.
    `feat(orders): add status filter`, `test(e2e): cover filter after reload`.
-   The message says what and why. Never commit a red state.
+   The message says what and why. Add a body line `Red: <test name>` for the
+   test you saw fail first (or `Red: none - <reason>`). Never commit a red state.
 
 Tick the task in the spec as you go (`- [x]`) so a new session can resume.
 
